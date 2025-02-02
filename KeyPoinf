@@ -1,0 +1,46 @@
+const express = require('express');
+const app = express();
+const port = process.env.PORT || 3000;
+
+let keys = {};
+
+setInterval(() => {
+    const currentTime = Date.now();
+    for (let key in keys) {
+        if (currentTime - keys[key].timestamp >= 30 * 24 * 60 * 60 * 1000) {
+            delete keys[key];
+            console.log(`Key ${key} has expired and was deleted.`);
+        }
+    }
+}, 24 * 60 * 60 * 1000);
+
+app.get('/getKey', (req, res) => {
+    let key = generateRandomKey();
+    let timestamp = Date.now();
+    keys[key] = { valid: true, timestamp: timestamp };
+    res.json({ key: key });
+});
+
+app.get('/verifyKey', (req, res) => {
+    const { key } = req.query;
+    const currentTime = Date.now();
+
+    if (keys[key]) {
+        if (currentTime - keys[key].timestamp < 30 * 24 * 60 * 60 * 1000) {
+            res.json({ valid: true });
+        } else {
+            delete keys[key];
+            res.json({ valid: false, message: "Key has expired. Please generate a new key." });
+        }
+    } else {
+        res.json({ valid: false, message: "Invalid key." });
+    }
+});
+
+function generateRandomKey() {
+    return Math.random().toString(36).substr(2, 10);
+}
+
+app.listen(port, () => {
+    console.log(`Server listening at http://localhost:${port}`);
+});
